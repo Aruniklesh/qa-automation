@@ -34,6 +34,17 @@ Every test ──► HTML report, with a screenshot when a test fails
 
 The 24 designed test cases (17 automated, 7 manual, with reasons) are in [docs/TEST_CASES_PART_A.md](docs/TEST_CASES_PART_A.md).
 
+**Documentation (in the `docs` folder)**
+
+| Document | What it is |
+| :--- | :--- |
+| [Test_Cases.xlsx](docs/Test_Cases.xlsx) | Test cases in Excel: 24 cases, 16 data-driven scenarios, 6 API checks, traceability to the assignment |
+| [Test_Plan.docx](docs/Test_Plan.docx) | Test plan: scope, approach, environment, data, criteria, risks, defect handling |
+| [Test_Suite_Document.docx](docs/Test_Suite_Document.docx) | The suites, every test, order and dependencies, how to run |
+| [Sample_Bug_Report.docx](docs/Sample_Bug_Report.docx) | Bug report format, severity guide, blank template and bug log |
+| [Flow_Charts.docx](docs/Flow_Charts.docx) | Flow charts of the journey and of the framework and pipeline (PNG files in `docs/flowcharts`) |
+| [TEST_CASES_PART_A.md](docs/TEST_CASES_PART_A.md) | Part A test case table and the automate-vs-manual reasoning |
+
 ## 2. Current status
 
 | Area | Status |
@@ -65,7 +76,7 @@ src/test/resources
   testdata/                       Invalid-data scenarios (JSON)
   schemas/                        Expected API response (JSON schema)
 Jenkinsfile                       Pipeline
-docs/                             Test cases, extra notes
+docs/                             Test cases (Excel), test plan, test suite document, bug report, flow charts
 ```
 
 ## 4. What you need
