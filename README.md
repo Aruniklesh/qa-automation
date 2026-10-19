@@ -41,7 +41,8 @@ The 24 designed test cases (17 automated, 7 manual, with reasons) are in [docs/T
 | Framework, test data, reporting, Jenkinsfile | Done |
 | Self-test (`FrameworkSmokeTest`) | Passing 7 of 7 |
 | Journey, validation and API tests | Written from the application guide. They need their first run against the QA environment (URLs and logins are supplied separately). Locators may need small adjustments in the page classes |
-| Jenkins run and screenshots | To do after the first QA run |
+| Jenkins pipeline | Runs on a local Jenkins: checkout, compile and the test stages start with credentials from the Jenkins store. Test stages report the missing QA settings until the QA URLs are supplied. Report and screenshots for the full run come after the first QA run |
+| Assumptions | Listed in section 10 |
 | Optional extras | Appium mobile test and parallel browsers are not done |
 
 ## 3. Project structure
@@ -186,29 +187,51 @@ The `Jenkinsfile` has the stages **Checkout → Install → API tests → UI tes
 | `No upload summary with added/rejected counts` | The summary wording differs. Adjust the matching pattern in `BulkUploadPage` |
 | Many tests skipped | An earlier step failed. Fix the first red test |
 
-## 10. Bugs and UX issues found
+## 10. Assumptions
+
+The QA environment and Swagger were not available while building, so the framework was written from the application guide with these assumptions. If one is wrong, the fix is a small change in the place named.
+
+| # | Assumption | If it is different, change |
+| :--- | :--- | :--- |
+| 1 | Field and button names on screen are close to the guide (for example "CRN", "IBAN", "PPSN", "Add employer", "Bulk upload") | The label text in the page class, for example `fieldByLabel("crn")` in `CreateEmployerPage` |
+| 2 | The employer address lookup shows a list of suggestions and the first one is acceptable | `employer.address.lookup` in `config.properties`, or `addressSuggestion` in `CreateEmployerPage` |
+| 3 | Payroll date, economic status and occupation are dropdowns. If the configured value is not offered, the first real option is used and noted in the report | `employer.payroll.day` and `employer.admin.*` in `config.properties` |
+| 4 | The PEP question is a Yes/No choice, and "No" is a valid answer for a test admin | `employer.admin.pep.answer` |
+| 5 | The invite email goes to the address entered, contains the verification code next to the word "code", and links to the Employer portal | `inbox.code.regex` in `config.properties`, `EmailInboxHandler` |
+| 6 | The invite is read from a Gmail test inbox (with a `+alias` address per run) over IMAP using an App Password | `inbox.*` settings in `secrets.properties` |
+| 7 | The employee list and the employer list can be searched, or show the new record on the first page | `searchInput` in `EmployersPage` / `EmployeesPage` |
+| 8 | The bulk upload page shows a summary with words like "3 added" and "2 rejected", and a reason next to each rejected row | The `ADDED` / `REJECTED` patterns in `BulkUploadPage` |
+| 9 | The portal's CSV template has a header row. Columns are matched by name (first name, last name, email, mobile, date of birth, PPSN, start date), and dates use `dd/MM/yyyy` | `CsvTestDataGenerator`, `csv.date.format` |
+| 10 | A valid PPSN has 7 digits followed by a valid check letter. The generated test PPSNs follow the published checksum, so the application should accept them | `TestDataGenerator.validPpsn()` |
+| 11 | A valid mobile is an Irish number such as `+353 8x xxxxxxx`, and a valid date of birth means the employee is at least 18 | `TestDataGenerator.irishMobile()`, `EmployeeModel` |
+| 12 | The API login takes an email and password, and returns the token in a field called `token` | `api.auth.*` in `environments/qa.properties` |
+| 13 | The API uses JSON field names that match `EmployeeModel` (`firstName`, `lastName`, `email`, `mobileNumber`, `dateOfBirth`, `ppsn`, `startDate`), returns the new id in `id`, and a bad PPSN returns 400 with a message that mentions the PPSN | `EmployeeModel`, `api.employee.id.path`, `schemas/employee-response.schema.json` |
+| 14 | The API-created employee belongs to the same employer as the employer admin used for the portal check | `api.employer.id` |
+| 15 | Test data is not deleted after a run. Everything starts with `QA-AUTO-` so the provider can clean it up | Add an API cleanup step (see "what to add next") |
+
+## 11. Bugs and UX issues found
 
 None reported yet because the QA environment has not been run. Problems found and fixed in this framework during review: assertions that could never fail, wrong bank fields (sort code instead of IBAN/BIC), invalid generated PPSNs, credentials in CI files, and Jenkins stages overwriting each other's results.
 
-## 11. Written questions
+## 12. Written questions
 
 **1. If a test fails in Jenkins, how do you find out whether the problem is the application or the test?**
-Open the report: the message, the screenshot and the step that failed. A wrong status code, a missing row or an error banner points to the application. A timeout on a locator while the page looks normal points to the test. Then repeat it by hand or through the API. If the API check for the same rule also fails, it is the application.
+I start with the Extent report and look at three things: the error message, the screenshot, and which step failed. If a status code is wrong, a record is missing, or the screenshot shows an error banner, I suspect the application. If a locator timed out while the page looks perfectly normal, I suspect my test. Then I try the same thing by hand, or through the API. If the API also rejects it, it is a real bug. If it works by hand, I fix the test.
 
 **2. How would you run the UI tests in parallel on Jenkins agents and alert the team on failure?**
-The driver is already thread-safe (`ThreadLocal`), so TestNG can run independent classes in parallel. In Jenkins I would use a `parallel` block with one stage per browser, or per suite, on separate agents or a Selenium Grid. For alerts, the `post { failure / unstable }` block sends an email, and Slack works the same way with a link to the report.
+The browser handling is already thread-safe, so TestNG can run independent test classes side by side. The journey itself has to stay in order, so I would keep it in one class. In Jenkins I would add a `parallel` block with one stage per browser (or per suite), running on separate agents or on a Selenium Grid. For alerts, the pipeline already has a failure and unstable step that sends an email. Slack would work the same way, with a link to the report so people can click straight through.
 
 **3. You are the only tester on the product. How would you split effort between UI, API and mobile testing?**
-About 50% API, 30% web UI, 20% mobile and exploratory. Business rules are cheapest and most stable at the API. UI automation covers only the key journeys. Mobile gets a small smoke test plus exploratory testing on real devices.
+Roughly half my time on the API, a third on the web UI, and the rest on mobile and exploratory testing. The business rules, like PPSN, age and duplicates, are quickest and most stable to check at the API. I would keep the UI automation for the few journeys that really matter, like this one. For mobile, I would write a small smoke test and then test by hand on real devices, because identity checks and app builds are hard to automate reliably.
 
 **4. How would you test payment reconciliation, where a bank file must match an employer's contribution payment?**
-Create an employer with a known contribution amount, then feed bank files for each case: exact match, underpayment, overpayment, wrong reference, duplicate file. Check the result for each: status, amounts to the cent, no double allocation, and an audit record.
+I would set up an employer with a known contribution amount and then try a bank file for each situation: an exact match, too little, too much, a wrong reference, and the same file sent twice. For each one I would check the status, that the amounts match to the cent, that money is never allocated twice, and that an audit record is written.
 
 **5. How would you handle flaky tests caused by slow emails or third-party identity checks?**
-Never fixed sleeps. Poll the inbox with a timeout and a unique address per run (done in this framework). Stub third-party identity checks in QA with fixed pass, fail and PEP personas, and keep a few real contract tests. At most one retry, only for known external steps, and report it.
+I avoid fixed sleeps. Instead the test keeps checking the inbox until the email arrives or a timeout is reached, and every run uses its own email address, so an old email can never be picked up by mistake. That is how this framework works. For third-party identity checks, I would replace them in QA with a stub that gives fixed answers (pass, fail, PEP match), and keep just a few tests against the real provider. I would allow at most one retry, only for those external steps, and I would show it in the report so it never hides a real problem.
 
 **6. How would you manage test data so the QA environment does not fill up with junk?**
-Prefix everything with `QA-AUTO-` plus a run id (done here). Clean up through the API after each run where possible, plus a scheduled job that removes old `QA-AUTO-` records. Reuse long-lived reference data instead of creating it every time.
+Everything the tests create starts with `QA-AUTO-` and a run id, which is how this framework works, so test data is easy to spot. After a run I would delete what I created through the API where possible, and I would add a scheduled job to remove old `QA-AUTO-` records. For things that rarely change, like a ready-made employer admin, I would reuse one instead of creating a new one every run.
 
 **7. What would you add next if you had another week?**
-Run on QA and record the evidence, add API cleanup of test data, automate invalid-IBAN and bad-upload-file cases, run browsers in parallel in Jenkins, and add the Appium registration smoke test.
+First, run everything properly against the QA environment and capture the evidence. Then I would add API cleanup of the test data, automate the cases I left manual (invalid IBAN and a bad upload file), run browsers in parallel in Jenkins, and write the Appium smoke test for the registration screen.
