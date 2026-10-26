@@ -40,3 +40,6 @@ Thumbs.db
 
 # Visual Studio cache
 .vs/
+
+# Office temporary lock files (created while a document is open)
+~$*

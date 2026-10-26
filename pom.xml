@@ -87,7 +87,14 @@
             <version>${angus-mail.version}</version>
         </dependency>
 
-        <!-- SLF4J Simple Logger Provider -->
+        <!-- SLF4J: interface (version 2.x, so it matches the provider below) -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <!-- SLF4J: simple logger provider that prints to the console -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>

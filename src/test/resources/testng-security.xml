@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<!-- Security checks: API (auth, tokens, injection, error leaks) and Admin portal (login, session, role access).
+     UI-SEC-3 needs an employer admin: run after the journey, or set employer.admin.email / employer.admin.password. -->
+<suite name="Security Suite" verbose="1">
+
+    <listeners>
+        <listener class-name="com.uplift.reporting.ExtentTestListener"/>
+    </listeners>
+
+    <test name="API Security">
+        <classes>
+            <class name="com.uplift.tests.security.SecurityApiTest"/>
+        </classes>
+    </test>
+
+    <test name="Admin Portal Security">
+        <classes>
+            <class name="com.uplift.tests.security.SecurityUiTest"/>
+        </classes>
+    </test>
+
+</suite>
